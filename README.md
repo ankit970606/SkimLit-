@@ -1,62 +1,65 @@
-# SkimLit📄🔥  
+# 🧠 SkimLit 📄🔥  
 ### Token + Character + Positional (Tribrid) Deep Learning Model
 
 ---
 
 ## 📄 Research Paper Reference
 
-This project is inspired by and based on the research paper:
+This project is inspired by the research paper:
 
-**PubMed 200k RCT: a Dataset for Sequential Sentence Classification in Medical Abstracts**  
-Franck Dernoncourt, Ji Young Lee
+**PubMed 200k RCT: A Dataset for Sequential Sentence Classification in Medical Abstracts**  
+Franck Dernoncourt, Ji Young Lee (IJCNLP 2017)
 
-### 🔗 Paper Link
-- https://arxiv.org/abs/1710.06071
+🔗 Links:
+- https://arxiv.org/abs/1710.06071  
 - https://github.com/Franck-Dernoncourt/pubmed-rct
+
+This paper introduced the task of **sequential sentence classification** and showed that
+sentence **position + content** is crucial in medical abstracts.
 
 ---
 
 ## 📌 Project Overview
 
-This project implements a **state-of-the-art neural network architecture** to classify sentences from **biomedical research abstracts** into their rhetorical roles using the **PubMed RCT (Randomized Controlled Trial) dataset**.
+This project implements a **deep learning model** to classify sentences from
+**biomedical research abstracts** into their rhetorical roles using the
+**PubMed RCT dataset**.
 
-Each sentence in an abstract is classified into one of the following categories:
+Each sentence is classified into one of the following categories:
 
 - **OBJECTIVE**
 - **METHODS**
 - **RESULTS**
 - **CONCLUSIONS**
-- **BACKGROUND** *(dataset-dependent)*
+- **BACKGROUND** (dataset dependent)
 
-The model uses a **Tribrid Architecture** combining:
+The model follows a **Tribrid Architecture** that combines:
 
-1. **Token-level semantic embeddings**
-2. **Character-level morphological embeddings**
-3. **Positional information**
+1. Token-level semantic meaning  
+2. Character-level word morphology  
+3. Positional information within the abstract  
 
-This approach closely follows modern NLP research for structured document understanding.
+This mirrors the structure of real medical papers.
 
 ---
-
-
 
 ## 📂 Dataset
 
 **PubMed 20k RCT Dataset**
 
 - ~20,000 biomedical abstracts
-- Numbers replaced with `@` to prevent memorization
-- Each sentence labeled with its rhetorical role
-
+- Numbers replaced with `@` to reduce overfitting
+- Each sentence labeled with its section type
 
 
 ---
 
 ## 🏗️ Model Architecture (Model-5)
 
-### High-level architecture
+### High-Level Architecture
 
-Text
+
+Sentence
 ├─ Token Embedding (Universal Sentence Encoder)
 ├─ Character Embedding (BiLSTM)
 ├─ Line Number Encoding
@@ -78,60 +81,45 @@ Softmax Output
 ### 1️⃣ Token-Level Embeddings (Semantic Meaning)
 
 - Uses **Universal Sentence Encoder (USE)**
-- Generates a **512-dimensional vector** per sentence
-- Captures sentence-level semantics
+- Produces a **512-dimensional embedding per sentence**
+- Captures semantic meaning of the full sentence
 
-Mathematically:
+Conceptually:
+- Each sentence `s` is converted into a dense vector `e_token`
+- This vector is passed through a Dense + ReLU layer to reduce dimensionality
 
-\[
-\mathbf{e}_{token} = f_{\text{USE}}(s) \in \mathbb{R}^{512}
-\]
-
-Projected to lower dimension:
-
-\[
-\mathbf{h}_{token} = \text{ReLU}(W_t \mathbf{e}_{token} + b_t)
-\]
+This helps the model understand *what the sentence is about*.
 
 ---
 
 ### 2️⃣ Character-Level Embeddings (Morphology)
 
-- Sentences split into characters
-- Characters embedded and passed through **Bidirectional LSTM**
-- Handles:
-  - Medical terms
-  - Misspellings
+- Sentences are split into characters
+- Characters are embedded and processed by a **Bidirectional LSTM**
+- Helps with:
+  - Medical terminology
   - Rare words
+  - Misspellings
 
-\[
-\mathbf{h}_{char} = \text{BiLSTM}(\text{Embed}(c_1, \dots, c_n))
-\]
-
-Output dimension:
-\[
-\mathbf{h}_{char} \in \mathbb{R}^{64}
-\]
+The BiLSTM captures both **prefix and suffix patterns**, producing a compact
+representation of word structure.
 
 ---
 
 ### 3️⃣ Positional Embeddings (Document Structure)
 
-#### a) Line Number Encoding
-- One-hot encoded (depth = 15)
-- Indicates sentence position
+Medical abstracts follow a fixed structure.
 
-\[
-\mathbf{p}_{line} = \text{ReLU}(W_l \cdot \text{OneHot(line\_number)})
-\]
+#### a) Line Number Encoding
+- One-hot encoded vector (depth = 15)
+- Represents the sentence’s position in the abstract
+- Example: early lines → OBJECTIVE, later lines → RESULTS
 
 #### b) Total Lines Encoding
-- One-hot encoded (depth = 20)
-- Indicates abstract length
+- One-hot encoded vector (depth = 20)
+- Represents the overall abstract length
 
-\[
-\mathbf{p}_{total} = \text{ReLU}(W_t \cdot \text{OneHot(total\_lines)})
-\]
+These features help the model learn **document flow**.
 
 ---
 
@@ -139,60 +127,53 @@ Output dimension:
 
 All representations are concatenated:
 
-\[
-\mathbf{h}_{combined} =
-[\mathbf{h}_{token} \| \mathbf{h}_{char} \| \mathbf{p}_{line} \| \mathbf{p}_{total}]
-\]
+- Token embedding
+- Character embedding
+- Line number embedding
+- Total lines embedding
 
-Followed by dense transformation and dropout:
+The combined vector is passed through:
+- Dense layer (ReLU)
+- Dropout (0.5) for regularization
 
-\[
-\mathbf{z} = \text{ReLU}(W_c \mathbf{h}_{combined} + b_c)
-\]
+This allows the model to jointly reason about
+**content + form + position**.
 
 ---
 
 ### 5️⃣ Output Layer
 
-Final classification using Softmax:
+- Final Dense layer with **Softmax**
+- Outputs probabilities for each section label
 
-\[
-\hat{y} = \text{Softmax}(W_o \mathbf{z} + b_o)
-\]
+The predicted label is the class with the highest probability.
 
 ---
 
 ## 🎯 Loss Function
 
-The model uses **Categorical Cross-Entropy with Label Smoothing**:
+The model uses **Categorical Cross-Entropy with Label Smoothing**.
 
-\[
-\mathcal{L} =
-- \sum_{i=1}^{C} \tilde{y}_i \log(\hat{y}_i)
-\]
+Why label smoothing?
+- Prevents the model from becoming over-confident
+- Improves generalization
 
-Label smoothing:
-
-\[
-\tilde{y}_i =
-(1 - \epsilon) y_i + \frac{\epsilon}{C}
-\]
-
-This improves generalization and reduces over-confidence.
+Instead of forcing probability = 1 for the true class,
+a small amount is distributed across other classes.
 
 ---
 
 ## ⚙️ Training Strategy
 
-- **Optimizer:** Adam
+- **Optimizer:** Adam  
 - **Regularization:**
-  - Dropout (0.5)
-  - Label smoothing (0.2)
+  - Dropout = 0.5
+  - Label smoothing = 0.2  
 - **Callbacks:**
   - EarlyStopping (patience = 3)
-  - ModelCheckpoint (best weights only)
+  - ModelCheckpoint (save best weights only)
 - **Training Setup:**
-  - Partial-epoch training (10%) for faster experimentation
+  - Partial-epoch training (10%) for faster iteration
 
 ---
 
@@ -205,10 +186,4 @@ This improves generalization and reduces over-confidence.
 | 10 | 84.5% | 0.91 |
 | 19 | **85.5%** | **0.90** |
 
-### Observations
-- Stable convergence
-- No severe overfitting
-- EarlyStopping triggered correctly
-
----
 
