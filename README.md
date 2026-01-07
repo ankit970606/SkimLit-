@@ -64,11 +64,11 @@ Sentence
 ├─ Character Embedding (BiLSTM)
 ├─ Line Number Encoding
 └─ Total Lines Encoding
-↓
+->
 Concatenation
-↓
+->
 Dense + Dropout
-↓
+->
 Softmax Output
 
 
